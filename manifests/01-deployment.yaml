@@ -69,12 +69,12 @@ spec:
             - -c
             - |
                 declare -r croot=/mnt/kube
-                declare -r health_endpoint="https://10.128.0.1:2379/health"
+                declare -r health_endpoint="https://etcd.kube-system.svc:2379/health"
                 declare -r cert="$(find $croot -name 'system:etcd-peer*.crt' -print)"
                 declare -r key="$(find $croot -name 'system:etcd-peer*.key' -print)"
                 declare -r cacert="$croot/ca.crt"
                 [[ -z $cert || -z $key ]] && exit 1
-                curl -k --silent --cert "${cert//:/\:}" --key "$key" --cacert "$cacert" "$health_endpoint" |grep '{ *"health" *: *"true" *}'
+                curl --silent --cert "${cert//:/\:}" --key "$key" --cacert "$cacert" "$health_endpoint" |grep '{ *"health" *: *"true" *}'
             initialDelaySecond: 5
             periodSecond: 5
         resources:
