@@ -1,0 +1,8 @@
+kind: ImageStream
+apiVersion: image.openshift.io/v1
+spec:
+  tags:
+  - name: etcd-quorum-guard
+    from:
+      kind: DockerImage
+      name: registry.svc.ci.openshift.org/openshift/origin-v4.0:etcd-quorum-guard
