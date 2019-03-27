@@ -4,7 +4,7 @@ MAIN_PACKAGE=
 #BIN=$(lastword $(subst /, ,$(PACKAGE)))
 #BINDATA=pkg/manifests/bindata.go
 
-#GOFMT_CHECK=$(shell find . -not \( \( -wholename './.*' -o -wholename '*/vendor/*' \) -prune \) -name '*.go' | sort -u | xargs gofmt -s -l)
+GOFMT_CHECK=$(shell find . -not \( \( -wholename './.*' -o -wholename '*/vendor/*' \) -prune \) -name '*.go' | sort -u | xargs gofmt -s -l)
 REV=$(shell git describe --long --tags --match='v*' --always --dirty)
 
 DOCKERFILE=Dockerfile
@@ -21,7 +21,6 @@ IMAGE_REGISTRY=quay.io
 all: generate build
 
 build:
-#	$(GO_BUILD_RECIPE)
 
 # Using "-modtime 1" to make generate target deterministic. It sets all file time stamps to unix timestamp 1
 generate: $(GOBINDATA_BIN)
@@ -32,7 +31,7 @@ $(GOBINDATA_BIN):
 #	go get -u github.com/jteeuwen/go-bindata/...
 
 test-e2e: generate
-#	go test -v ./test/e2e/... -root $(PWD) -kubeconfig=$(KUBECONFIG) -tags e2e -globalMan manifests/02-crd.yaml
+	go test -v ./test/e2e
 
 verify:	verify-gofmt
 
@@ -49,11 +48,10 @@ else
 endif
 
 test:
-#	go test ./cmd/... ./pkg/... -coverprofile cover.out
+	true
 
 clean:
-#	go clean
-	rm -f $(BIN)
+	go clean
 
 local-image:
 ifdef USE_BUILDAH
