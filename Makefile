@@ -31,7 +31,7 @@ $(GOBINDATA_BIN):
 #	go get -u github.com/jteeuwen/go-bindata/...
 
 test-e2e: generate
-	go test -v ./test/e2e
+	go test -v ./test/e2e --count=1
 
 verify:	verify-gofmt
 
