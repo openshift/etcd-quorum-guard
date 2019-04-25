@@ -25,12 +25,19 @@ var pods = make(map[string]podstatus)
 
 type podinfo map[string]podstatus
 
+// TestEtcdQuorumGuard tests the etcd Quorum Guard.  It assumes there
+// are exactly three master pods (as does the etcd Quorum Guard at
+// present).  The test first makes one node unschedulable and evicts
+// the EQG pod from it, ensuring that eviction succeeds.  The test
+// next makes a second node unschedulable and then attempts to evict
+// the EQG pod from it.  It checks that the pod is *not* evicted.  It
+// then makes all nodes schedulable and checks that the EQG pod is
+// present/restarted on all masters.  It then makes one node
+// unschedulable again and checks that the EQG pod is evicted.
 func TestEtcdQuorumGuard(t *testing.T) {
 	kclient, err := initialize()
 	if err != nil {
-		fmt.Printf("No etcd-quorum-guard deployment present; assume for now it is not configured.\n")
-		return
-		//t.Fatal(err.Error())
+		t.Fatalf("etcdQuotaGuard deployment not present: %s", err.Error())
 	}
 	fmt.Print("Make all schedulable\n")
 	if err = makeAllNodesSchedulable(kclient); err != nil {
@@ -41,7 +48,7 @@ func TestEtcdQuorumGuard(t *testing.T) {
 		t.Errorf("Unable to get all etcd-quorum-guard pods running: %s", err.Error())
 	}
 	fmt.Print("Make one unschedulable\n")
-	if err = makeOneNodeUnschedulable(kclient); err != nil {
+	if err = makeOneNodeUnschedulableAndEvict(kclient); err != nil {
 		t.Errorf("Unable to make one node unschedulable: %s", err.Error())
 	}
 	fmt.Print("Wait for 2 running\n")
@@ -49,7 +56,7 @@ func TestEtcdQuorumGuard(t *testing.T) {
 		t.Errorf("Unable to get one etcd-quorum-guard pod stopped: %s", err.Error())
 	}
 	fmt.Print("Make second unschedulable\n")
-	if err = makeOneNodeUnschedulable(kclient); err == nil || !strings.Contains(err.Error(), "it would violate the pod's disruption budget") {
+	if err = makeOneNodeUnschedulableAndEvict(kclient); err == nil || !strings.Contains(err.Error(), "it would violate the pod's disruption budget") {
 		fmt.Print("  Pod should not have been evicted\n")
 		t.Errorf("Pod should not have been evicted because it violated disruption budget: %v", err)
 	} else {
@@ -64,7 +71,7 @@ func TestEtcdQuorumGuard(t *testing.T) {
 		t.Errorf("Unable to get all etcd-quorum-guard pods running: %s", err.Error())
 	}
 	fmt.Print("Make one unschedulable\n")
-	if err = makeOneNodeUnschedulable(kclient); err != nil {
+	if err = makeOneNodeUnschedulableAndEvict(kclient); err != nil {
 		t.Errorf("Unable to make one node unschedulable: %s", err.Error())
 	}
 	fmt.Print("Wait for one not running\n")
@@ -163,7 +170,9 @@ func evictEtcdQuotaGuardPodsFromNode(kclient *k8sclient.Clientset, node string) 
 	return err
 }
 
-func makeOneNodeUnschedulable(kclient *k8sclient.Clientset) error {
+// makeOneNodeUnschedulableAndEvict attempts to evict the etcd Quorum
+// Guard pod from a node after making it unschedulable.
+func makeOneNodeUnschedulableAndEvict(kclient *k8sclient.Clientset) error {
 	var err error
 	for node, unschedulable := range nodes {
 		if !unschedulable {
@@ -200,6 +209,9 @@ func waitForEtcdQuorumGuardDeployment(kclient *k8sclient.Clientset) error {
 	return err
 }
 
+// waitForPods waits for the expected number of etcd Quorum Guard pods
+// to be present and for the number of available pods to be within the
+// specified bounds.
 func waitForPods(kclient *k8sclient.Clientset, expectedTotal, min, max int32) error {
 	err := wait.PollImmediate(5*time.Second, 2*time.Minute, func() (bool, error) {
 		d, err := kclient.AppsV1().Deployments("kube-system").Get("etcd-quorum-guard", metav1.GetOptions{})
@@ -218,7 +230,6 @@ func waitForPods(kclient *k8sclient.Clientset, expectedTotal, min, max int32) er
 			fmt.Printf("  Deployment is ready! %d %d\n", d.Status.Replicas, d.Status.AvailableReplicas)
 			return true, nil
 		}
-		//fmt.Printf("  Deployment is not ready! %d %d\n", d.Status.Replicas, d.Status.AvailableReplicas)
 		return false, nil
 	})
 	if err != nil {
