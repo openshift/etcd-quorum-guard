@@ -60,9 +60,11 @@ spec:
         - mountPath: /mnt/kube
           name: kubecerts
         command:
-        - "/bin/sleep"
-        args:
-        - "infinity"
+        - /bin/sh
+        - -c
+        - |
+            trap 'kill -TERM $PID' TERM
+            /bin/sleep infinity
         readinessProbe:
           exec:
             command:
