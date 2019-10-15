@@ -1,5 +1,9 @@
 # etcd Quorum Guard
 
+*NOTE: This repository is not the source of the etcd quorum guard;
+that has been moved to the machine config operator.  This repository
+is present for reference only.*
+
 The etcd Quorum Guard ensures that quorum is maintained for etcd for
 [OpenShift](https://openshift.io/).
 
